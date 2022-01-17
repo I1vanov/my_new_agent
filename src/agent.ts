@@ -19,8 +19,6 @@ const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) =
 
   // create finding if gas used is higher than threshold
   const gasUsed = new BigNumber(txEvent.gasUsed)
-//   console.log(txEvent);
-  
   if (gasUsed.isGreaterThan("1000000")) {
     findings.push(Finding.fromObject({
       name: "High Gas Used",

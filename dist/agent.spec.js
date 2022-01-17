@@ -68,7 +68,6 @@ describe("high gas agent", function () {
         }); });
         it("returns a finding if gas used is above threshold", function () { return __awaiter(void 0, void 0, void 0, function () {
             var txEvent, findings;
-            
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:

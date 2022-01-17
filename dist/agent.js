@@ -43,7 +43,6 @@ var bignumber_js_1 = __importDefault(require("bignumber.js"));
 var forta_agent_1 = require("forta-agent");
 var findingsCount = 0;
 var handleTransaction = function (txEvent) { return __awaiter(void 0, void 0, void 0, function () {
-    
     var findings, gasUsed;
     return __generator(this, function (_a) {
         findings = [];

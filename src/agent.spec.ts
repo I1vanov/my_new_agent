@@ -22,7 +22,7 @@ describe("high gas agent", () => {
 
   describe("handleTransaction", () => {
     it("returns empty findings if gas used is below threshold", async () => {
-      const txEvent = createTxEventWithGasUsed("1") 
+      const txEvent = createTxEventWithGasUsed("1")
 
       const findings = await handleTransaction(txEvent)
 
@@ -33,9 +33,7 @@ describe("high gas agent", () => {
       const txEvent = createTxEventWithGasUsed("1000001")
 
       const findings = await handleTransaction(txEvent)
-        
-        
-        
+
       expect(findings).toStrictEqual([
         Finding.fromObject({
           name: "High Gas Used",
