@@ -1,7 +1,7 @@
 {
-  "name": "forta-agent",
+  "name": "alex_shon",
   "version": "0.0.1",
-  "description": "",
+  "description": "Forta Agent Typescript starter project Alex_Shon",
   "scripts": {
     "build": "tsc",
     "start": "npm run start:dev",
