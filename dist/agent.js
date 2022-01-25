@@ -40,35 +40,67 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var bignumber_js_1 = __importDefault(require("bignumber.js"));
+var web3_1 = __importDefault(require("web3"));
 var forta_agent_1 = require("forta-agent");
-var findingsCount = 0;
-var handleTransaction = function (txEvent) { return __awaiter(void 0, void 0, void 0, function () {
-    var findings, gasUsed;
-    return __generator(this, function (_a) {
-        findings = [];
-        // limiting this agent to emit only 5 findings so that the alert feed is not spammed
-        if (findingsCount >= 5)
-            return [2 /*return*/, findings];
-        gasUsed = new bignumber_js_1.default(txEvent.gasUsed);
-        if (gasUsed.isGreaterThan("1000000")) {
-            findings.push(forta_agent_1.Finding.fromObject({
-                name: "High Gas Used",
-                description: "Gas Used: ".concat(gasUsed),
-                alertId: "FORTA-1",
-                severity: forta_agent_1.FindingSeverity.Medium,
-                type: forta_agent_1.FindingType.Suspicious
-            }));
-            findingsCount++;
-        }
-        return [2 /*return*/, findings];
-    });
-}); };
-// const handleBlock: HandleBlock = async (blockEvent: BlockEvent) => {
-//   const findings: Finding[] = [];
-//   // detect some block condition
-//   return findings;
-// }
+var HIGH_GAS_THRESHOLD = "7000000";
+var AAVE_V2_ADDRESS = "0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9";
+var FLASH_LOAN_EVENT_SIGNATURE = "FlashLoan(address,address,address,uint256,uint256,uint16)";
+var INTERESTING_PROTOCOLS = ["0xacd43e627e64355f1861cec6d3a6688b31a6f952"]; // Yearn Dai vault
+var BALANCE_DIFF_THRESHOLD = "200000000000000000000"; // 200 eth
+var web3 = new web3_1.default((0, forta_agent_1.getJsonRpcUrl)());
+console.log(web3);
+function provideHandleTransaction(web3) {
+    return function handleTransaction(txEvent) {
+        return __awaiter(this, void 0, void 0, function () {
+            var findings, flashLoanEvents, protocolAddress, blockNumber, currentBalance, _a, previousBalance, _b, balanceDiff;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        findings = [];
+                        // if gas too low
+                        if (new bignumber_js_1.default(txEvent.gasUsed).isLessThan(HIGH_GAS_THRESHOLD))
+                            return [2 /*return*/, findings];
+                        // if aave not involved
+                        if (!txEvent.addresses[AAVE_V2_ADDRESS])
+                            return [2 /*return*/, findings];
+                        flashLoanEvents = txEvent.filterEvent(FLASH_LOAN_EVENT_SIGNATURE);
+                        if (!flashLoanEvents.length)
+                            return [2 /*return*/, findings];
+                        protocolAddress = INTERESTING_PROTOCOLS.find(function (address) { return txEvent.addresses[address]; });
+                        if (!protocolAddress)
+                            return [2 /*return*/, findings];
+                        blockNumber = txEvent.blockNumber;
+                        _a = bignumber_js_1.default.bind;
+                        return [4 /*yield*/, web3.eth.getBalance(protocolAddress, blockNumber)];
+                    case 1:
+                        currentBalance = new (_a.apply(bignumber_js_1.default, [void 0, _c.sent()]))();
+                        _b = bignumber_js_1.default.bind;
+                        return [4 /*yield*/, web3.eth.getBalance(protocolAddress, blockNumber - 1)];
+                    case 2:
+                        previousBalance = new (_b.apply(bignumber_js_1.default, [void 0, _c.sent()]))();
+                        balanceDiff = previousBalance.minus(currentBalance);
+                        if (balanceDiff.isLessThan(BALANCE_DIFF_THRESHOLD))
+                            return [2 /*return*/, findings];
+                        findings.push(forta_agent_1.Finding.fromObject({
+                            name: "Flash Loan With Loss Detection",
+                            description: "Flash loan with loss is detected.",
+                            alertId: "NETHFORTA-6",
+                            protocol: "Aave",
+                            type: forta_agent_1.FindingType.Suspicious,
+                            severity: forta_agent_1.FindingSeverity.High,
+                            metadata: {
+                                protocol: protocolAddress,
+                                balanceDiff: balanceDiff.toString(),
+                                loans: JSON.stringify(flashLoanEvents)
+                            }
+                        }));
+                        return [2 /*return*/, findings];
+                }
+            });
+        });
+    };
+}
 exports.default = {
-    handleTransaction: handleTransaction,
-    // handleBlock
+    provideHandleTransaction: provideHandleTransaction,
+    handleTransaction: provideHandleTransaction(web3)
 };
